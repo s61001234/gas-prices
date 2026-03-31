@@ -2,12 +2,10 @@ import re
 import urllib.request
 from datetime import date
 
-# Fetch AAA page
 url = "https://gasprices.aaa.com/state-gas-price-averages/"
 req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
 html = urllib.request.urlopen(req, timeout=15).read().decode("utf-8")
 
-# State abbreviation → FIPS code
 FIPS = {
     "AK":"02","AL":"01","AR":"05","AZ":"04","CA":"06","CO":"08","CT":"09",
     "DC":"11","DE":"10","FL":"12","GA":"13","HI":"15","IA":"19","ID":"16",
@@ -34,8 +32,6 @@ STATE_NAMES = {
     "WI":"Wisconsin","WV":"West Virginia","WY":"Wyoming",
 }
 
-# Parse table rows from AAA HTML
-# Matches lines like: | Alaska | $4.590 | $4.865 | $5.089 | $5.640 |
 rows = re.findall(
     r'\[([A-Za-z ]+)\]\(https://gasprices\.aaa\.com\?state=([A-Z]+)\)'
     r'.*?\|\s*\$([\d.]+)\s*\|\s*\$([\d.]+)\s*\|\s*\$([\d.]+)',
@@ -43,11 +39,10 @@ rows = re.findall(
 )
 
 if len(rows) < 40:
-    print(f"Only found {len(rows)} rows — keeping existing data")
+    print(f"Only found {len(rows)} rows, keeping existing data")
     exit(0)
 
-# Build new FALLBACK array string
-today = date.today().strftime("%-m/%-d/%y")
+today = date.today().strftime("%m/%d/%y")
 lines = []
 for (name, abbr, reg, mid, pre) in rows:
     abbr = abbr.strip()
@@ -58,9 +53,8 @@ for (name, abbr, reg, mid, pre) in rows:
     lines.append(f'  ["{abbr}","{display_name}",{reg},{mid},{pre},"{fips}"],')
 
 new_fallback = "const FALLBACK = [\n" + "\n".join(lines) + "\n];"
-new_date = f'app.dataDate = \'{today}\';'
+new_date = f"app.dataDate = '{today}';"
 
-# Patch index.html
 with open("index.html", "r") as f:
     content = f.read()
 
@@ -70,18 +64,4 @@ content = re.sub(r"app\.dataDate = '[^']+';", new_date, content)
 with open("index.html", "w") as f:
     f.write(content)
 
-print(f"✅ Updated {len(lines)} states — dated {today}")
-```
-
-4. Scroll down and click **Commit new file**
-
----
-
-## Step 6 — Add the daily schedule
-
-This is the "alarm clock" that tells GitHub to run your script every morning.
-
-1. Click **Add file → Create new file**
-2. In the filename box, type exactly:
-```
-   .github/workflows/update-prices.yml
+print(f"Updated {len(lines)} states - dated {today}")
