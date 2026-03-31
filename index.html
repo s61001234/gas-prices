@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>US Gas Prices — AAA State Averages</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0a0c0f;
+  --surface:  #111318;
+  --surface2: #181b22;
+  --border:   #21262f;
+  --text:     #dde2ea;
+  --muted:    #5a6272;
+  --accent:   #f0c040;
+  --cheap:    #1a9641;
+  --mid:      #ffffbf;
+  --exp:      #d7191c;
+  --font-h:   'Bebas Neue', Impact, sans-serif;
+  --font-b:   'DM Sans', system-ui, sans-serif;
+  --font-m:   'DM Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-b); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+/* ── HEADER ── */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.header-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+h1 { font-family: var(--font-h); font-size: 28px; letter-spacing: 1px; color: var(--accent); line-height: 1; }
+.subtitle { font-size: 12px; color: var(--muted); }
+
+.nat-avg {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 14px;
+}
+.nat-avg-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.nat-avg-price { font-family: var(--font-m); font-size: 22px; font-weight: 500; color: var(--accent); }
+.nat-avg-sub { font-size: 10px; color: var(--muted); }
+
+.legend-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: auto;
+}
+.legend-bar {
+  width: 160px;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(to right, #1a9641, #ffffbf, #d7191c);
+}
+.legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-m);
+  font-size: 10px;
+}
+.legend-labels span:nth-child(1) { color: var(--cheap); }
+.legend-labels span:nth-child(2) { color: var(--mid); }
+.legend-labels span:nth-child(3) { color: var(--exp); }
+
+.data-date { font-size: 10px; color: var(--muted); font-style: italic; }
+
+/* ── MAIN ── */
+.main { display: flex; flex: 1; overflow: hidden; }
+
+/* ── MAP ── */
+.map-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 60%, #0d1119 0%, #07090c 100%);
+}
+#map-svg { width: 100%; height: 100%; }
+
+.state-path {
+  stroke: #0a0c0f;
+  stroke-width: 0.7;
+  cursor: pointer;
+  transition: stroke-width 0.1s, stroke 0.1s;
+}
+.state-path:hover { stroke: var(--accent); stroke-width: 1.8; }
+.state-path.selected { stroke: var(--accent); stroke-width: 2.2; }
+
+/* ── TOOLTIP ── */
+#tooltip {
+  position: absolute;
+  pointer-events: none;
+  display: none;
+  background: rgba(8,10,14,0.97);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  min-width: 180px;
+  z-index: 50;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+}
+.tt-state { font-family: var(--font-h); font-size: 18px; color: var(--text); letter-spacing: 0.5px; margin-bottom: 8px; }
+.tt-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; margin-bottom: 3px; }
+.tt-key { color: var(--muted); }
+.tt-val { font-family: var(--font-m); font-weight: 500; }
+.tt-rank { font-size: 11px; color: var(--muted); margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px; }
+
+/* ── SIDE PANEL ── */
+.side-panel {
+  width: 300px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-title { font-family: var(--font-h); font-size: 16px; letter-spacing: 0.5px; color: var(--text); margin-bottom: 6px; }
+.sort-controls { display: flex; gap: 5px; align-items: center; }
+.sort-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-right: 2px; }
+.sort-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 3px 9px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font-b);
+  transition: all 0.12s;
+}
+.sort-btn:hover { color: var(--text); }
+.sort-btn.active { color: var(--accent); border-color: var(--accent); }
+
+.table-wrap { flex: 1; overflow-y: auto; }
+.table-wrap::-webkit-scrollbar { width: 3px; }
+.table-wrap::-webkit-scrollbar-track { background: var(--surface); }
+.table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th {
+  padding: 7px 10px;
+  text-align: left;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+  border-bottom: 1px solid var(--border);
+}
+thead th:last-child { text-align: right; }
+tr.state-row { border-bottom: 1px solid rgba(33,38,47,0.5); cursor: pointer; transition: background 0.1s; }
+tr.state-row:hover { background: var(--surface2); }
+tr.state-row.selected { background: rgba(240,192,64,0.07); }
+td { padding: 6px 10px; vertical-align: middle; }
+td.rank-cell { font-family: var(--font-m); font-size: 10px; color: var(--muted); width: 24px; }
+td.name-cell { font-size: 12px; }
+td.price-cell { text-align: right; font-family: var(--font-m); font-size: 12px; font-weight: 500; }
+.color-swatch { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; flex-shrink: 0; }
+
+.panel-footer { padding: 6px 12px; border-top: 1px solid var(--border); font-size: 10px; color: var(--muted); opacity: 0.6; flex-shrink: 0; }
+
+/* ── LOADING ── */
+.loading {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 100;
+}
+.loading-title { font-family: var(--font-h); font-size: 32px; color: var(--accent); letter-spacing: 2px; }
+.spinner { width: 36px; height: 36px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-msg { font-size: 12px; color: var(--muted); font-family: var(--font-m); }
+
+@media (max-width: 680px) { .side-panel { display: none; } .legend-wrap { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <div class="loading-title">⛽ GAS PRICES</div>
+  <div class="spinner"></div>
+  <div class="loading-msg" id="load-msg">Loading map…</div>
+</div>
+
+<header>
+  <div class="header-title">
+    <h1>⛽ US Gas Prices</h1>
+    <span class="subtitle">AAA State Averages</span>
+  </div>
+  <div class="nat-avg">
+    <span class="nat-avg-label">National Avg</span>
+    <span class="nat-avg-price" id="nat-avg-price">$4.018</span>
+    <span class="nat-avg-sub">/gal regular</span>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <div class="legend-wrap">
+      <div class="legend-bar"></div>
+      <div class="legend-labels">
+        <span id="leg-min">cheapest</span>
+        <span id="leg-avg">avg</span>
+        <span id="leg-max">priciest</span>
+      </div>
+    </div>
+    <div class="data-date" id="data-date">as of 3/31/26 · Source: AAA</div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="map-wrap">
+    <svg id="map-svg"></svg>
+    <div id="tooltip"></div>
+  </div>
+  <div class="side-panel">
+    <div class="panel-header">
+      <div class="panel-title">All States</div>
+      <div class="sort-controls">
+        <span class="sort-label">Sort:</span>
+        <button class="sort-btn active" data-sort="price-asc">$ Low→High</button>
+        <button class="sort-btn" data-sort="price-desc">$ High→Low</button>
+        <button class="sort-btn" data-sort="name">A–Z</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>State</th><th>Regular</th></tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div class="panel-footer">Regular unleaded · AAA · <span id="footer-date">3/31/26</span></div>
+  </div>
+</div>
+
+<script>
+// ── FALLBACK DATA (AAA as of 3/31/26) ─────────────────────────────────────
+// [abbr, full name, regular, midgrade, premium, FIPS]
+const FALLBACK = [
+  ["AK","Alaska",          4.590, 4.865, 5.089, "02"],
+  ["AL","Alabama",         3.676, 4.098, 4.501, "01"],
+  ["AR","Arkansas",        3.444, 3.896, 4.250, "05"],
+  ["AZ","Arizona",         4.682, 5.071, 5.382, "04"],
+  ["CA","California",      5.887, 6.118, 6.311, "06"],
+  ["CO","Colorado",        3.874, 4.266, 4.593, "08"],
+  ["CT","Connecticut",     3.953, 4.480, 4.895, "09"],
+  ["DC","District of Columbia", 4.191, 4.736, 5.117, "11"],
+  ["DE","Delaware",        3.876, 4.463, 4.748, "10"],
+  ["FL","Florida",         4.124, 4.578, 4.903, "12"],
+  ["GA","Georgia",         3.625, 4.092, 4.508, "13"],
+  ["HI","Hawaii",          5.452, 5.670, 5.905, "15"],
+  ["IA","Iowa",            3.282, 3.522, 4.138, "19"],
+  ["ID","Idaho",           4.267, 4.559, 4.814, "16"],
+  ["IL","Illinois",        4.203, 4.790, 5.263, "17"],
+  ["IN","Indiana",         3.975, 4.527, 5.022, "18"],
+  ["KS","Kansas",          3.288, 3.619, 3.939, "20"],
+  ["KY","Kentucky",        3.784, 4.319, 4.754, "21"],
+  ["LA","Louisiana",       3.630, 4.041, 4.431, "22"],
+  ["MA","Massachusetts",   3.818, 4.387, 4.787, "25"],
+  ["MD","Maryland",        4.014, 4.574, 4.907, "24"],
+  ["ME","Maine",           3.863, 4.420, 4.885, "23"],
+  ["MI","Michigan",        3.915, 4.514, 5.073, "26"],
+  ["MN","Minnesota",       3.416, 3.849, 4.341, "27"],
+  ["MO","Missouri",        3.438, 3.871, 4.170, "29"],
+  ["MS","Mississippi",     3.608, 4.035, 4.419, "28"],
+  ["MT","Montana",         3.711, 4.019, 4.369, "30"],
+  ["NC","North Carolina",  3.839, 4.298, 4.689, "37"],
+  ["ND","North Dakota",    3.433, 3.779, 4.194, "38"],
+  ["NE","Nebraska",        3.369, 3.552, 3.997, "31"],
+  ["NH","New Hampshire",   3.801, 4.346, 4.804, "33"],
+  ["NJ","New Jersey",      3.927, 4.458, 4.730, "34"],
+  ["NM","New Mexico",      3.850, 4.279, 4.591, "35"],
+  ["NV","Nevada",          4.931, 5.239, 5.531, "32"],
+  ["NY","New York",        3.949, 4.439, 4.828, "36"],
+  ["OH","Ohio",            3.794, 4.327, 4.837, "39"],
+  ["OK","Oklahoma",        3.272, 3.688, 3.979, "40"],
+  ["OR","Oregon",          4.933, 5.151, 5.434, "41"],
+  ["PA","Pennsylvania",    3.976, 4.414, 4.791, "42"],
+  ["RI","Rhode Island",    3.862, 4.513, 4.922, "44"],
+  ["SC","South Carolina",  3.701, 4.146, 4.543, "45"],
+  ["SD","South Dakota",    3.397, 3.587, 4.095, "46"],
+  ["TN","Tennessee",       3.724, 4.196, 4.593, "47"],
+  ["TX","Texas",           3.678, 4.149, 4.522, "48"],
+  ["UT","Utah",            4.199, 4.485, 4.728, "49"],
+  ["VA","Virginia",        3.932, 4.399, 4.775, "51"],
+  ["VT","Vermont",         3.931, 4.424, 4.883, "50"],
+  ["WA","Washington",      5.346, 5.585, 5.836, "53"],
+  ["WI","Wisconsin",       3.615, 4.136, 4.707, "55"],
+  ["WV","West Virginia",   3.864, 4.311, 4.758, "54"],
+  ["WY","Wyoming",         3.846, 4.151, 4.436, "56"],
+];
+
+// ── STATE ─────────────────────────────────────────────────────
+const app = {
+  priceData: {},  // fips → {abbr, name, regular, midgrade, premium}
+  geoData: null,
+  selected: null,
+  sortBy: 'price-asc',
+  dataDate: '3/31/26',
+  natAvg: 4.018,
+  colorScale: null,
+};
+
+// Build from fallback
+function buildFromFallback() {
+  FALLBACK.forEach(([abbr, name, regular, midgrade, premium, fips]) => {
+    app.priceData[fips] = { abbr, name, regular, midgrade, premium };
+  });
+  app.natAvg = +(FALLBACK.reduce((s,r)=>s+r[2],0)/FALLBACK.length).toFixed(3);
+}
+
+// ── COLOR ─────────────────────────────────────────────────────
+function buildColorScale() {
+  const prices = Object.values(app.priceData).map(d=>d.regular);
+  const minP = Math.min(...prices);
+  const maxP = Math.max(...prices);
+  const avg  = app.natAvg;
+
+  // Piecewise: min→avg maps to green→yellow, avg→max maps to yellow→red
+  app.colorScale = val => {
+    if (val <= avg) {
+      const t = (val - minP) / (avg - minP);
+      return d3.interpolateRgb('#1a9641','#ffffbf')(Math.max(0, Math.min(1, t)));
+    } else {
+      const t = (val - avg) / (maxP - avg);
+      return d3.interpolateRgb('#ffffbf','#d7191c')(Math.max(0, Math.min(1, t)));
+    }
+  };
+
+  // Update legend anchors
+  document.getElementById('leg-min').textContent  = '$' + minP.toFixed(2);
+  document.getElementById('leg-avg').textContent  = '$' + avg.toFixed(2);
+  document.getElementById('leg-max').textContent  = '$' + maxP.toFixed(2);
+  document.getElementById('nat-avg-price').textContent = '$' + avg.toFixed(3);
+}
+
+// ── MAP ───────────────────────────────────────────────────────
+let svgEl, pathGen, statePaths;
+
+function buildMap() {
+  const container = document.getElementById('map-svg');
+  const W = container.clientWidth  || 900;
+  const H = container.clientHeight || 500;
+
+  svgEl = d3.select('#map-svg');
+  svgEl.selectAll('*').remove();
+
+  const proj = d3.geoAlbersUsa().scale(W * 1.22).translate([W / 2, H / 2]);
+  pathGen = d3.geoPath().projection(proj);
+
+  const states = topojson.feature(app.geoData, app.geoData.objects.states);
+
+  statePaths = svgEl.selectAll('.state-path')
+    .data(states.features)
+    .join('path')
+    .attr('class', 'state-path')
+    .attr('d', pathGen)
+    .on('mousemove', onHover)
+    .on('mouseleave', onLeave)
+    .on('click', onClick);
+
+  colorMap();
+}
+
+function colorMap() {
+  if (!statePaths) return;
+  statePaths.each(function(d) {
+    const fips = String(d.id).padStart(2,'0');
+    const entry = app.priceData[fips];
+    d3.select(this)
+      .attr('fill', entry ? app.colorScale(entry.regular) : '#1c2030')
+      .classed('selected', app.selected === fips);
+  });
+}
+
+// ── TOOLTIP ───────────────────────────────────────────────────
+function onHover(event, d) {
+  const fips  = String(d.id).padStart(2,'0');
+  const entry = app.priceData[fips];
+  const tt    = document.getElementById('tooltip');
+  if (!entry) { tt.style.display='none'; return; }
+
+  // Rank
+  const sorted = Object.values(app.priceData).sort((a,b)=>a.regular-b.regular);
+  const rank   = sorted.findIndex(s=>s.abbr===entry.abbr) + 1;
+  const total  = sorted.length;
+  const label  = rank <= 5 ? '🟢 Among cheapest' : rank >= total-4 ? '🔴 Among priciest' : '';
+
+  tt.innerHTML = `
+    <div class="tt-state">${entry.name}</div>
+    <div class="tt-row"><span class="tt-key">Regular</span><span class="tt-val" style="color:${app.colorScale(entry.regular)}">$${entry.regular.toFixed(3)}</span></div>
+    <div class="tt-row"><span class="tt-key">Mid-Grade</span><span class="tt-val">$${entry.midgrade.toFixed(3)}</span></div>
+    <div class="tt-row"><span class="tt-key">Premium</span><span class="tt-val">$${entry.premium.toFixed(3)}</span></div>
+    <div class="tt-row"><span class="tt-key">vs. National Avg</span><span class="tt-val" style="color:${entry.regular>app.natAvg?'#d7191c':'#1a9641'}">${entry.regular>app.natAvg?'+':''}${(entry.regular-app.natAvg).toFixed(3)}</span></div>
+    <div class="tt-rank">#${rank} of ${total} states ${label}</div>
+  `;
+
+  tt.style.display = 'block';
+  const rect = document.querySelector('.map-wrap').getBoundingClientRect();
+  let x = event.clientX - rect.left + 18;
+  let y = event.clientY - rect.top  + 18;
+  const tw = tt.offsetWidth, th = tt.offsetHeight;
+  if (x + tw > rect.width  - 8) x -= tw + 34;
+  if (y + th > rect.height - 8) y -= th + 34;
+  tt.style.left = x+'px';
+  tt.style.top  = y+'px';
+}
+
+function onLeave() { document.getElementById('tooltip').style.display='none'; }
+
+function onClick(event, d) {
+  const fips = String(d.id).padStart(2,'0');
+  if (!app.priceData[fips]) return;
+  app.selected = app.selected === fips ? null : fips;
+  colorMap();
+  highlightTableRow(fips);
+}
+
+// ── TABLE ─────────────────────────────────────────────────────
+function buildTable() {
+  const entries = Object.entries(app.priceData).map(([fips,e]) => ({fips,...e}));
+
+  entries.sort((a,b) => {
+    if (app.sortBy === 'name')       return a.name.localeCompare(b.name);
+    if (app.sortBy === 'price-desc') return b.regular - a.regular;
+    return a.regular - b.regular; // price-asc default
+  });
+
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+
+  entries.forEach((e, i) => {
+    const tr = document.createElement('tr');
+    tr.className = 'state-row' + (app.selected === e.fips ? ' selected' : '');
+    tr.dataset.fips = e.fips;
+    const swatch = `<span class="color-swatch" style="background:${app.colorScale(e.regular)}"></span>`;
+    tr.innerHTML = `
+      <td class="rank-cell">${i+1}</td>
+      <td class="name-cell">${swatch}${e.name}</td>
+      <td class="price-cell" style="color:${app.colorScale(e.regular)}">$${e.regular.toFixed(3)}</td>
+    `;
+    tr.addEventListener('click', () => {
+      app.selected = app.selected === e.fips ? null : e.fips;
+      colorMap();
+      highlightTableRow(e.fips);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function highlightTableRow(fips) {
+  document.querySelectorAll('.state-row').forEach(r => {
+    r.classList.toggle('selected', r.dataset.fips === fips && app.selected === fips);
+  });
+  if (app.selected) {
+    const row = document.querySelector(`.state-row[data-fips="${fips}"]`);
+    row?.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  }
+}
+
+// ── CONTROLS ──────────────────────────────────────────────────
+function setupControls() {
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      app.sortBy = btn.dataset.sort;
+      document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      buildTable();
+    });
+  });
+  window.addEventListener('resize', () => { buildMap(); colorMap(); });
+}
+
+// ── LIVE FETCH (attempt) ──────────────────────────────────────
+async function tryLiveFetch() {
+  // AAA page uses JavaScript rendering — direct fetch will only get static HTML
+  // We try via a CORS proxy fallback, but primarily rely on fallback data
+  try {
+    const r = await fetch('https://gasprices.aaa.com/state-gas-price-averages/', {
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!r.ok) return false;
+    const html = await r.text();
+
+    // Parse table rows: | State | Regular | Mid-Grade | Premium | Diesel |
+    const rowRe = /\[([A-Z]{2,2})\]\(https:\/\/gasprices\.aaa\.com\?state=[A-Z]+\).*?\|\s*\$?([\d.]+)\s*\|\s*\$?([\d.]+)\s*\|\s*\$?([\d.]+)/g;
+    // Try table markdown-style or HTML style
+    const tableRe = /<tr[\s\S]*?<\/tr>/gi;
+    const tdRe = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+
+    let parsed = 0;
+    // Match the text table format from fetched page
+    const textTable = html.match(/\| \[(\w+)\]\(.*?\) \| \$([\d.]+) \| \$([\d.]+) \| \$([\d.]+)/g);
+    if (textTable && textTable.length > 10) {
+      textTable.forEach(row => {
+        const m = row.match(/\| \[(\w+)\].*?\| \$([\d.]+) \| \$([\d.]+) \| \$([\d.]+)/);
+        if (m) {
+          const abbr = m[1];
+          const entry = FALLBACK.find(f=>f[0]===abbr);
+          if (entry) {
+            app.priceData[entry[5]] = { abbr, name: entry[1], regular: +m[2], midgrade: +m[3], premium: +m[4] };
+            parsed++;
+          }
+        }
+      });
+    }
+    return parsed > 30;
+  } catch(e) {
+    return false;
+  }
+}
+
+// ── BOOT ──────────────────────────────────────────────────────
+async function boot() {
+  document.getElementById('load-msg').textContent = 'Loading US map geometry…';
+
+  try {
+    // 1. Load TopoJSON
+    const geoResp = await fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json');
+    app.geoData = await geoResp.json();
+
+    // 2. Always build from fallback first
+    document.getElementById('load-msg').textContent = 'Loading gas price data…';
+    buildFromFallback();
+
+    // 3. Attempt live upgrade (best-effort, ~5s timeout)
+    await tryLiveFetch(); // updates app.priceData in-place if it works
+
+    // 4. Build scales and render
+    buildColorScale();
+    buildMap();
+    buildTable();
+    setupControls();
+
+    // Hide loading screen
+    const el = document.getElementById('loading');
+    el.style.transition = 'opacity 0.35s';
+    el.style.opacity = '0';
+    setTimeout(() => el.style.display='none', 350);
+
+  } catch(e) {
+    document.getElementById('load-msg').textContent = 'Error: ' + e.message;
+    console.error(e);
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
