@@ -53,13 +53,13 @@ for (name, abbr, reg, mid, pre) in rows:
     lines.append(f'  ["{abbr}","{display_name}",{reg},{mid},{pre},"{fips}"],')
 
 new_fallback = "const FALLBACK = [\n" + "\n".join(lines) + "\n];"
-new_date = f"app.dataDate = '{today}';"
+new_date = f"dataDate: '{today}',"
 
 with open("index.html", "r") as f:
     content = f.read()
 
 content = re.sub(r'const FALLBACK = \[[\s\S]*?\];', new_fallback, content)
-content = re.sub(r"app\.dataDate = '[^']+';", new_date, content)
+content = re.sub(r"dataDate: '[^']+'," , new_date, content)
 
 with open("index.html", "w") as f:
     f.write(content)
