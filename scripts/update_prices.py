@@ -1,13 +1,9 @@
 import re
-import json
 import urllib.request
 from datetime import date
 
-# AAA loads prices dynamically - we'll try multiple approaches
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
-# Hardcoded current prices as reliable baseline
-# Script will try to fetch live data, fall back to updating date only
 STATE_PRICES = {
     "AK":{"name":"Alaska","fips":"02"},
     "AL":{"name":"Alabama","fips":"01"},
@@ -63,14 +59,10 @@ STATE_PRICES = {
 }
 
 def fetch_state_price(abbr):
-    """Fetch price for a single state from AAA state page"""
     try:
         url = f"https://gasprices.aaa.com/?state={abbr}"
         req = urllib.request.Request(url, headers=HEADERS)
         html = urllib.request.urlopen(req, timeout=10).read().decode("utf-8")
-        
-        # Look for price patterns in the page
-        # AAA shows prices like $3.272 or 3.272
         patterns = [
             r'Regular[^$]*\$([\d]+\.[\d]+)',
             r'"regular"\s*:\s*"?([\d]+\.[\d]+)',
@@ -81,51 +73,42 @@ def fetch_state_price(abbr):
             m = re.search(pattern, html, re.IGNORECASE)
             if m:
                 price = float(m.group(1))
-                if 2.0 < price < 8.0:  # sanity check
+                if 2.0 < price < 8.0:
                     return price
     except Exception as e:
         print(f"  {abbr}: fetch failed - {e}")
     return None
 
 def fetch_all_states_page():
-    """Try to get all prices from the main state averages page"""
     try:
         url = "https://gasprices.aaa.com/state-gas-price-averages/"
         req = urllib.request.Request(url, headers=HEADERS)
         html = urllib.request.urlopen(req, timeout=15).read().decode("utf-8")
-        
-        # Try multiple regex patterns for the table
         patterns = [
-            # Markdown table format
             r'\[([A-Za-z ]+)\]\(https://gasprices\.aaa\.com\?state=([A-Z]+)\).*?\|\s*\$([\d.]+)\s*\|\s*\$([\d.]+)\s*\|\s*\$([\d.]+)',
-            # HTML table format
             r'state=([A-Z]{2}).*?>([\d]+\.[\d]+)<.*?>([\d]+\.[\d]+)<.*?>([\d]+\.[\d]+)<',
-            # JSON-like format
             r'"([A-Z]{2})"[^}]*"regular"\s*:\s*"?([\d.]+)',
         ]
-        
         for pattern in patterns:
             rows = re.findall(pattern, html, re.DOTALL)
             if len(rows) >= 40:
                 print(f"Found {len(rows)} states with pattern")
                 return rows, html
-                
         print(f"Page fetched but no price table found. Page length: {len(html)}")
-        print("First 500 chars:", html[:500])
         return [], html
     except Exception as e:
         print(f"Failed to fetch main page: {e}")
         return [], ""
 
-# Try main page first
+# ── STEP 1: Try fetching all states from main page ──
 print("Fetching AAA state averages page...")
 rows, html = fetch_all_states_page()
 
-prices = {}  # abbr -> (regular, midgrade, premium)
+prices = {}
 
 if len(rows) >= 40:
     for row in rows:
-        if len(row) == 6:  # (name, abbr, reg, mid, pre)
+        if len(row) == 6:
             name, abbr, reg, mid, pre = row[0], row[1], row[2], row[3], row[4]
         elif len(row) == 5:
             name, abbr, reg, mid, pre = row
@@ -140,14 +123,14 @@ if len(rows) >= 40:
             except:
                 pass
 
-# If main page didn't work, fetch each state individually
+# ── STEP 2: If main page failed, fetch each state one by one ──
 if len(prices) < 40:
     print(f"Only got {len(prices)} from main page, fetching states individually...")
     for abbr in STATE_PRICES:
         if abbr not in prices:
             price = fetch_state_price(abbr)
             if price:
-                prices[abbr] = (price, price * 1.1, price * 1.2)
+                prices[abbr] = (price, round(price * 1.1, 3), round(price * 1.2, 3))
                 print(f"  {abbr}: ${price}")
 
 print(f"Total states with prices: {len(prices)}")
@@ -156,7 +139,7 @@ if len(prices) < 40:
     print("Could not get enough state prices, keeping existing data")
     exit(0)
 
-# Build new FALLBACK array
+# ── STEP 3: Build updated FALLBACK array ──
 today = date.today().strftime("%m/%d/%y")
 lines = []
 for abbr, info in STATE_PRICES.items():
@@ -168,18 +151,23 @@ for abbr, info in STATE_PRICES.items():
 
 new_fallback = "const FALLBACK = [\n" + "\n".join(lines) + "\n];"
 
-# Read and update index.html
+# ── STEP 4: Calculate new national average ──
+nat_avg = sum(p[0] for p in prices.values()) / len(prices)
+nat_avg_str = f"{nat_avg:.3f}"
+print(f"National average: ${nat_avg_str}")
+
+# ── STEP 5: Read index.html and patch all three values ──
 with open("index.html", "r", encoding="utf-8") as f:
     content = f.read()
 
-# Update FALLBACK data
+# Patch 1: state price data
 content = re.sub(
     r'const FALLBACK = \[[\s\S]*?\n\];',
     new_fallback,
     content
 )
 
-# Update date - find and replace directly
+# Patch 2: date
 match = re.search(r"dataDate: '[^']*',", content)
 if match:
     content = content.replace(match.group(0), f"dataDate: '{today}',")
@@ -187,6 +175,15 @@ if match:
 else:
     print("WARNING: Could not find dataDate")
 
+# Patch 3: national average
+match2 = re.search(r"natAvg: [\d.]+,", content)
+if match2:
+    content = content.replace(match2.group(0), f"natAvg: {nat_avg_str},")
+    print(f"National avg updated to ${nat_avg_str}")
+else:
+    print("WARNING: Could not find natAvg")
+
+# ── STEP 6: Save updated file ──
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(content)
 
