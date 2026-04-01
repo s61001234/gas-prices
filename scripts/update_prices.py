@@ -100,9 +100,45 @@ def fetch_all_states_page():
         print(f"Failed to fetch main page: {e}")
         return [], ""
 
-# ── STEP 1: Try fetching all states from main page ──
+def fetch_official_nat_avg(html):
+    """Try to get AAA's official national average from the page"""
+    # Try main page HTML first
+    patterns = [
+        r'National Average\s*\$?([\d]+\.[\d]+)',
+        r'national.average.*?\$?([\d]+\.[\d]+)',
+        r'avg.*?\$?([\d]+\.[\d]+)',
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, html, re.IGNORECASE)
+        if m:
+            price = float(m.group(1))
+            if 2.0 < price < 8.0:
+                print(f"AAA official national average found: ${price}")
+                return price
+
+    # Try AAA homepage as backup
+    try:
+        req = urllib.request.Request("https://gasprices.aaa.com/", headers=HEADERS)
+        home_html = urllib.request.urlopen(req, timeout=10).read().decode("utf-8")
+        for pattern in patterns:
+            m = re.search(pattern, home_html, re.IGNORECASE)
+            if m:
+                price = float(m.group(1))
+                if 2.0 < price < 8.0:
+                    print(f"AAA official national average (homepage): ${price}")
+                    return price
+    except Exception as e:
+        print(f"Could not fetch homepage: {e}")
+
+    print("Could not find AAA official national average, will calculate from states")
+    return None
+
+# ── STEP 1: Fetch main AAA page ──
 print("Fetching AAA state averages page...")
 rows, html = fetch_all_states_page()
+
+# ── STEP 1B: Try to get AAA's official national average ──
+official_nat_avg = fetch_official_nat_avg(html)
 
 prices = {}
 
@@ -151,12 +187,16 @@ for abbr, info in STATE_PRICES.items():
 
 new_fallback = "const FALLBACK = [\n" + "\n".join(lines) + "\n];"
 
-# ── STEP 4: Calculate new national average ──
-nat_avg = sum(p[0] for p in prices.values()) / len(prices)
+# ── STEP 4: Determine national average ──
+if official_nat_avg:
+    nat_avg = official_nat_avg
+    print(f"Using AAA official national average: ${nat_avg}")
+else:
+    nat_avg = sum(p[0] for p in prices.values()) / len(prices)
+    print(f"Using calculated national average: ${nat_avg:.3f}")
 nat_avg_str = f"{nat_avg:.3f}"
-print(f"National average: ${nat_avg_str}")
 
-# ── STEP 5: Read index.html and patch all three values ──
+# ── STEP 5: Read index.html and patch all values ──
 with open("index.html", "r", encoding="utf-8") as f:
     content = f.read()
 
@@ -166,12 +206,13 @@ content = re.sub(
     new_fallback,
     content
 )
+print("State prices updated")
 
-# Patch 2: date
+# Patch 2: date in app object
 match = re.search(r"dataDate: '[^']*',", content)
 if match:
     content = content.replace(match.group(0), f"dataDate: '{today}',")
-    print(f"Date updated to {today}")
+    print(f"dataDate updated to {today}")
 else:
     print("WARNING: Could not find dataDate")
 
@@ -191,12 +232,13 @@ content = re.sub(
 )
 print(f"Header date updated to {today}")
 
-# Patch 5: national average price in HTML header
+# Patch 5: national average in HTML header
 content = re.sub(
     r'(\$[\d.]+)(?=</span>\s*<span class="nat-avg-sub">)',
     f'${nat_avg_str}',
     content
 )
+print(f"Header national avg updated to ${nat_avg_str}")
 
 # Patch 6: footer date
 content = re.sub(
