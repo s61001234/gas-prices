@@ -53,15 +53,26 @@ for (name, abbr, reg, mid, pre) in rows:
     lines.append(f'  ["{abbr}","{display_name}",{reg},{mid},{pre},"{fips}"],')
 
 new_fallback = "const FALLBACK = [\n" + "\n".join(lines) + "\n];"
-new_date = f"dataDate: '{today}',"
 
-with open("index.html", "r") as f:
+with open("index.html", "r", encoding="utf-8") as f:
     content = f.read()
 
-content = re.sub(r'const FALLBACK = \[[\s\S]*?\];', new_fallback, content)
-content = re.sub(r"dataDate: '[^']+'," , new_date, content)
+# Replace FALLBACK array
+content = re.sub(
+    r'const FALLBACK = \[[\s\S]*?\n\];',
+    new_fallback,
+    content
+)
 
-with open("index.html", "w") as f:
+# Replace date - find the exact string and replace it directly
+old_date_pattern = re.search(r"dataDate: '[^']*',", content)
+if old_date_pattern:
+    content = content.replace(old_date_pattern.group(0), f"dataDate: '{today}',")
+    print(f"Date updated to {today}")
+else:
+    print("WARNING: Could not find dataDate in file")
+
+with open("index.html", "w", encoding="utf-8") as f:
     f.write(content)
 
 print(f"Updated {len(lines)} states - dated {today}")
