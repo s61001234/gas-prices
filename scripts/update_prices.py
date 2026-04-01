@@ -175,13 +175,36 @@ if match:
 else:
     print("WARNING: Could not find dataDate")
 
-# Patch 3: national average
+# Patch 3: national average in app object
 match2 = re.search(r"natAvg: [\d.]+,", content)
 if match2:
     content = content.replace(match2.group(0), f"natAvg: {nat_avg_str},")
-    print(f"National avg updated to ${nat_avg_str}")
+    print(f"natAvg updated to ${nat_avg_str}")
 else:
     print("WARNING: Could not find natAvg")
+
+# Patch 4: date in HTML header
+content = re.sub(
+    r'as of [\d/]+\s*·\s*Source: AAA',
+    f'as of {today} · Source: AAA',
+    content
+)
+print(f"Header date updated to {today}")
+
+# Patch 5: national average price in HTML header
+content = re.sub(
+    r'(\$[\d.]+)(?=</span>\s*<span class="nat-avg-sub">)',
+    f'${nat_avg_str}',
+    content
+)
+
+# Patch 6: footer date
+content = re.sub(
+    r'(<span id="footer-date">)[^<]*(</span>)',
+    f'\\g<1>{today}\\g<2>',
+    content
+)
+print(f"Footer date updated to {today}")
 
 # ── STEP 6: Save updated file ──
 with open("index.html", "w", encoding="utf-8") as f:
