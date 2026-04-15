@@ -221,7 +221,7 @@ td.price-cell { text-align: right; font-family: var(--font-m); font-size: 12px; 
   </div>
   <div class="nat-avg">
     <span class="nat-avg-label">National Avg</span>
-    <span class="nat-avg-price" id="nat-avg-price">$4.118</span>
+    <span class="nat-avg-price" id="nat-avg-price">$4.108</span>
     <span class="nat-avg-sub">/gal regular</span>
   </div>
   <div style="display:flex;flex-direction:column;gap:3px">
@@ -233,7 +233,7 @@ td.price-cell { text-align: right; font-family: var(--font-m); font-size: 12px; 
         <span id="leg-max">priciest</span>
       </div>
     </div>
-    <div class="data-date" id="data-date">as of 04/14/26 · Source: AAA</div>
+    <div class="data-date" id="data-date">as of 04/15/26 · Source: AAA</div>
   </div>
 </header>
 
@@ -258,7 +258,7 @@ td.price-cell { text-align: right; font-family: var(--font-m); font-size: 12px; 
         <tbody id="table-body"></tbody>
       </table>
     </div>
-    <div class="panel-footer">Regular unleaded · AAA · <span id="footer-date">04/14/26</span></div>
+    <div class="panel-footer">Regular unleaded · AAA · <span id="footer-date">04/15/26</span></div>
   </div>
 </div>
 
@@ -266,57 +266,57 @@ td.price-cell { text-align: right; font-family: var(--font-m); font-size: 12px; 
 // ── FALLBACK DATA (AAA as of 3/31/26) ─────────────────────────────────────
 // [abbr, full name, regular, midgrade, premium, FIPS]
 const FALLBACK = [
-  ["AK","Alaska",4.657,5.123,5.588,"02"],
-  ["AL","Alabama",3.849,4.234,4.619,"01"],
-  ["AR","Arkansas",3.645,4.010,4.374,"05"],
-  ["AZ","Arizona",4.677,5.145,5.612,"04"],
-  ["CA","California",5.884,6.472,7.061,"06"],
-  ["CO","Colorado",3.917,4.309,4.700,"08"],
-  ["CT","Connecticut",4.083,4.491,4.900,"09"],
-  ["DC","District of Columbia",4.295,4.724,5.154,"11"],
-  ["DE","Delaware",3.996,4.396,4.795,"10"],
-  ["FL","Florida",4.105,4.516,4.926,"12"],
-  ["GA","Georgia",3.695,4.064,4.434,"13"],
-  ["HI","Hawaii",5.650,6.215,6.780,"15"],
-  ["IA","Iowa",3.660,4.026,4.392,"19"],
-  ["ID","Idaho",4.332,4.765,5.198,"16"],
-  ["IL","Illinois",4.375,4.812,5.250,"17"],
-  ["IN","Indiana",3.912,4.303,4.694,"18"],
-  ["KS","Kansas",3.495,3.845,4.194,"20"],
-  ["KY","Kentucky",4.003,4.403,4.804,"21"],
-  ["LA","Louisiana",3.757,4.133,4.508,"22"],
-  ["MA","Massachusetts",3.968,4.365,4.762,"25"],
-  ["MD","Maryland",4.112,4.523,4.934,"24"],
-  ["ME","Maine",4.033,4.436,4.840,"23"],
-  ["MI","Michigan",3.939,4.333,4.727,"26"],
-  ["MN","Minnesota",3.718,4.090,4.462,"27"],
-  ["MO","Missouri",3.665,4.032,4.398,"29"],
-  ["MS","Mississippi",3.748,4.123,4.498,"28"],
-  ["MT","Montana",3.897,4.287,4.676,"30"],
-  ["NC","North Carolina",3.878,4.266,4.654,"37"],
-  ["ND","North Dakota",3.612,3.973,4.334,"38"],
-  ["NE","Nebraska",3.606,3.967,4.327,"31"],
-  ["NH","New Hampshire",3.966,4.363,4.759,"33"],
-  ["NJ","New Jersey",4.017,4.419,4.820,"34"],
-  ["NM","New Mexico",3.959,4.355,4.751,"35"],
-  ["NV","Nevada",4.973,5.470,5.968,"32"],
-  ["NY","New York",4.128,4.541,4.954,"36"],
-  ["OH","Ohio",3.826,4.209,4.591,"39"],
-  ["OK","Oklahoma",3.442,3.786,4.130,"40"],
-  ["OR","Oregon",4.989,5.488,5.987,"41"],
-  ["PA","Pennsylvania",4.144,4.558,4.973,"42"],
-  ["RI","Rhode Island",3.980,4.378,4.776,"44"],
-  ["SC","South Carolina",3.808,4.189,4.570,"45"],
-  ["SD","South Dakota",3.680,4.048,4.416,"46"],
-  ["TN","Tennessee",3.875,4.263,4.650,"47"],
-  ["TX","Texas",3.790,4.169,4.548,"48"],
-  ["UT","Utah",4.209,4.630,5.051,"49"],
-  ["VA","Virginia",3.989,4.388,4.787,"51"],
-  ["VT","Vermont",4.096,4.506,4.915,"50"],
-  ["WA","Washington",5.393,5.932,6.472,"53"],
-  ["WI","Wisconsin",3.783,4.161,4.540,"55"],
-  ["WV","West Virginia",3.944,4.338,4.733,"54"],
-  ["WY","Wyoming",3.874,4.261,4.649,"56"],
+  ["AK","Alaska",4.642,5.106,5.570,"02"],
+  ["AL","Alabama",3.837,4.221,4.604,"01"],
+  ["AR","Arkansas",3.647,4.012,4.376,"05"],
+  ["AZ","Arizona",4.660,5.126,5.592,"04"],
+  ["CA","California",5.878,6.466,7.054,"06"],
+  ["CO","Colorado",3.958,4.354,4.750,"08"],
+  ["CT","Connecticut",4.080,4.488,4.896,"09"],
+  ["DC","District of Columbia",4.291,4.720,5.149,"11"],
+  ["DE","Delaware",3.972,4.369,4.766,"10"],
+  ["FL","Florida",4.146,4.561,4.975,"12"],
+  ["GA","Georgia",3.682,4.050,4.418,"13"],
+  ["HI","Hawaii",5.651,6.216,6.781,"15"],
+  ["IA","Iowa",3.646,4.011,4.375,"19"],
+  ["ID","Idaho",4.341,4.775,5.209,"16"],
+  ["IL","Illinois",4.364,4.800,5.237,"17"],
+  ["IN","Indiana",3.884,4.272,4.661,"18"],
+  ["KS","Kansas",3.507,3.858,4.208,"20"],
+  ["KY","Kentucky",3.983,4.381,4.780,"21"],
+  ["LA","Louisiana",3.749,4.124,4.499,"22"],
+  ["MA","Massachusetts",3.965,4.362,4.758,"25"],
+  ["MD","Maryland",4.102,4.512,4.922,"24"],
+  ["ME","Maine",4.024,4.426,4.829,"23"],
+  ["MI","Michigan",3.919,4.311,4.703,"26"],
+  ["MN","Minnesota",3.706,4.077,4.447,"27"],
+  ["MO","Missouri",3.673,4.040,4.408,"29"],
+  ["MS","Mississippi",3.744,4.118,4.493,"28"],
+  ["MT","Montana",3.904,4.294,4.685,"30"],
+  ["NC","North Carolina",3.861,4.247,4.633,"37"],
+  ["ND","North Dakota",3.616,3.978,4.339,"38"],
+  ["NE","Nebraska",3.628,3.991,4.354,"31"],
+  ["NH","New Hampshire",3.957,4.353,4.748,"33"],
+  ["NJ","New Jersey",4.003,4.403,4.804,"34"],
+  ["NM","New Mexico",3.958,4.354,4.750,"35"],
+  ["NV","Nevada",4.963,5.459,5.956,"32"],
+  ["NY","New York",4.125,4.538,4.950,"36"],
+  ["OH","Ohio",3.800,4.180,4.560,"39"],
+  ["OK","Oklahoma",3.444,3.788,4.133,"40"],
+  ["OR","Oregon",4.995,5.495,5.994,"41"],
+  ["PA","Pennsylvania",4.134,4.547,4.961,"42"],
+  ["RI","Rhode Island",3.973,4.370,4.768,"44"],
+  ["SC","South Carolina",3.790,4.169,4.548,"45"],
+  ["SD","South Dakota",3.684,4.052,4.421,"46"],
+  ["TN","Tennessee",3.861,4.247,4.633,"47"],
+  ["TX","Texas",3.768,4.145,4.522,"48"],
+  ["UT","Utah",4.211,4.632,5.053,"49"],
+  ["VA","Virginia",3.973,4.370,4.768,"51"],
+  ["VT","Vermont",4.089,4.498,4.907,"50"],
+  ["WA","Washington",5.391,5.930,6.469,"53"],
+  ["WI","Wisconsin",3.777,4.155,4.532,"55"],
+  ["WV","West Virginia",3.932,4.325,4.718,"54"],
+  ["WY","Wyoming",3.892,4.281,4.670,"56"],
 ];
 
 // ── STATE ─────────────────────────────────────────────────────
@@ -325,8 +325,8 @@ const app = {
   geoData: null,
   selected: null,
   sortBy: 'price-asc',
-  dataDate: '04/14/26',
-  natAvg: 4.118,
+  dataDate: '04/15/26',
+  natAvg: 4.108,
   colorScale: null,
 };
 
