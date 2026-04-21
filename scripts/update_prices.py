@@ -4,8 +4,16 @@ import time
 from datetime import date
 
 # Updated User-Agent to look like a modern Mac
-HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"}
-
+# We are making the headers much more detailed to look like a real, logged-in browser
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Cache-Control": "max-age=0",
+}
 STATE_PRICES = {
     "AK":{"name":"Alaska","fips":"02"}, "AL":{"name":"Alabama","fips":"01"}, "AR":{"name":"Arkansas","fips":"05"},
     "AZ":{"name":"Arizona","fips":"04"}, "CA":{"name":"California","fips":"06"}, "CO":{"name":"Colorado","fips":"08"},
