@@ -82,20 +82,34 @@ def fetch_state_price(abbr):
 def fetch_all_states_page():
     try:
         url = "https://gasprices.aaa.com/state-gas-price-averages/"
-        req = urllib.request.Request(url, headers=HEADERS)
+        # We create a specific request with a "Referer" to bypass the 403 block
+        req_headers = HEADERS.copy()
+        req_headers["Referer"] = "https://www.google.com/"
+        
+        req = urllib.request.Request(url, headers=req_headers)
         html = urllib.request.urlopen(req, timeout=15).read().decode("utf-8")
+        
         patterns = [
             r'\[([A-Za-z ]+)\]\(https://gasprices\.aaa\.com\?state=([A-Z]+)\).*?\|\s*\$([\d.]+)\s*\|\s*\$([\d.]+)\s*\|\s*\$([\d.]+)',
             r'state=([A-Z]{2}).*?>([\d]+\.[\d]+)<.*?>([\d]+\.[\d]+)<.*?>([\d]+\.[\d]+)<',
             r'"([A-Z]{2})"[^}]*"regular"\s*:\s*"?([\d.]+)',
         ]
+        
         for pattern in patterns:
             rows = re.findall(pattern, html, re.DOTALL)
             if len(rows) >= 40:
                 print(f"Found {len(rows)} states with pattern")
                 return rows, html
+        
         print(f"Page fetched but no price table found. Page length: {len(html)}")
         return [], html
+        
+    except urllib.error.HTTPError as e:
+        if e.code == 403:
+            print("Error 403: AAA blocked the request. Try updating the User-Agent.")
+        else:
+            print(f"HTTP Error {e.code}: {e.reason}")
+        return [], ""
     except Exception as e:
         print(f"Failed to fetch main page: {e}")
         return [], ""
